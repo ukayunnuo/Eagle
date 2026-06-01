@@ -42,6 +42,6 @@ gradio_tmp/*
 
 unit_test*.*
 
+/.venv/
+/.hf_cache/
 
-
-Embodied/docs/superpowers/plans/*
