@@ -44,9 +44,21 @@ async def lifespan(app: FastAPI):
     )
     set_worker(worker)
 
+    # 初始化异步任务管理器
+    from server.tasks.manager import AsyncTaskManager
+    from server.api.task_router import set_task_manager
+    from server.db import get_session_factory
+
+    task_manager = AsyncTaskManager(worker, get_session_factory())
+    set_task_manager(task_manager)
+    task_manager.start()
+
     yield
 
     # 清理
+    import asyncio
+    await task_manager.stop()
+    set_task_manager(None)
     set_worker(None)
 
 

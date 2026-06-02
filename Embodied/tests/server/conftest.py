@@ -12,6 +12,7 @@ from server.db import Base, get_db
 
 # 确保所有模型被导入，以便 create_all 能创建表
 import server.auth.models  # noqa: F401
+import server.tasks.models  # noqa: F401
 
 TEST_JWT_SECRET = "test-secret-key-for-testing"
 
@@ -53,12 +54,18 @@ async def app_client():
         from server.api.inference_router import set_worker
         set_worker(mock_worker)
 
-        # 跳过 lifespan（避免 init_db 和模型加载）
+        # 初始化任务管理器
+        from server.tasks.manager import AsyncTaskManager
+        from server.api.task_router import set_task_manager
+        task_manager = AsyncTaskManager(mock_worker, factory)
+        set_task_manager(task_manager)
+
         transport = ASGITransport(app=app, raise_app_exceptions=False)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             yield ac
 
         set_worker(None)
+        set_task_manager(None)
         app.dependency_overrides.clear()
 
     async with engine.begin() as conn:
