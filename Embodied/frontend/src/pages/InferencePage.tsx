@@ -21,8 +21,8 @@ export default function InferencePage() {
   const [tab, setTab] = useState<Tab>("image");
 
   return (
-    <div className="space-y-6 max-w-6xl">
-      <h2 className="text-2xl font-bold">推理工作台</h2>
+    <div className="space-y-6 max-w-full">
+      <h2 className="text-xl sm:text-2xl font-bold">推理工作台</h2>
 
       {/* 标签切换 */}
       <div className="flex gap-1 p-1 bg-slate-900 border border-slate-800 rounded-xl w-fit">
@@ -107,7 +107,7 @@ function ImageInferencePanel({ model }: { model: ModelInfo | undefined }) {
   }
 
   return (
-    <div className="grid grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div className="space-y-4">
         <UploadZone
           accept="image/*"
@@ -239,7 +239,7 @@ function VideoInferencePanel({ model }: { model: ModelInfo | undefined }) {
   const isRunning = taskStatus?.status === "processing" || taskStatus?.status === "pending";
 
   return (
-    <div className="grid grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div className="space-y-4">
         <UploadZone
           accept="video/mp4,video/mov,video/avi,video/mkv,video/webm"
@@ -263,7 +263,7 @@ function VideoInferencePanel({ model }: { model: ModelInfo | undefined }) {
           submitDisabled={!file || submitting || isRunning}
           extraParams={
             <>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 <div>
                   <label className="block text-xs text-slate-500 mb-1">采样间隔帧</label>
                   <input type="number" value={everyNFrames} min={1}
@@ -451,7 +451,7 @@ function ParamsPanel({
             className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-100" />
         </div>
       )}
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
         <div>
           <label className="block text-xs text-slate-500 mb-1">max_edge</label>
           <input type="number" value={maxImageEdge}

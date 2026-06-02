@@ -109,7 +109,7 @@ async def inference_image(
     return {
         "answer": answer,
         "boxes": parsed_boxes,
-        "annotated_image_url": f"/api/v1/files/{file_id}/annotated.jpg",
+        "annotated_image_url": f"/output/{file_id}/annotated.jpg",
         "file_id": file_id,
     }
 

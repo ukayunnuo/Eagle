@@ -26,8 +26,8 @@ export default function TasksPage() {
   const totalPages = Math.ceil((data?.total || 0) / size);
 
   return (
-    <div className="space-y-4 max-w-4xl">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 max-w-full">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
         <h2 className="text-2xl font-bold">任务历史</h2>
         <select
           value={statusFilter}

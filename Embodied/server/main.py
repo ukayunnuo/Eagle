@@ -84,6 +84,11 @@ def create_app(skip_lifespan: bool = False) -> FastAPI:
     # API 路由
     app.include_router(api_router)
 
+    # 输出文件静态服务（无需认证，供 <img> <video> 直接引用）
+    output_dir = Path("output")
+    output_dir.mkdir(exist_ok=True)
+    app.mount("/output", StaticFiles(directory=str(output_dir)), name="output-files")
+
     # 全局异常处理
     @app.exception_handler(Exception)
     async def global_exception_handler(request: Request, exc: Exception):

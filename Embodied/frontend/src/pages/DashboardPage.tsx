@@ -18,11 +18,11 @@ export default function DashboardPage() {
   const tasks = useQuery({ queryKey: ["tasks", 1, 5], queryFn: () => listTasks(1, 5) });
 
   return (
-    <div className="space-y-6 max-w-5xl">
-      <h2 className="text-2xl font-bold">仪表盘</h2>
+    <div className="space-y-6 max-w-full">
+      <h2 className="text-xl sm:text-2xl font-bold">仪表盘</h2>
 
       {/* 模型状态 */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="p-5 bg-slate-900 border border-slate-800 rounded-xl">
           <div className="flex items-center gap-2 text-slate-500 text-xs uppercase mb-2">
             <Cpu size={14} /> 模型
@@ -46,7 +46,7 @@ export default function DashboardPage() {
       </div>
 
       {/* 快速入口 */}
-      <div className="flex gap-3">
+      <div className="flex flex-wrap gap-3">
         <Link
           to="/inference"
           className="flex items-center gap-2 px-5 py-3 bg-green-600 hover:bg-green-500 text-white font-semibold rounded-xl transition-colors"

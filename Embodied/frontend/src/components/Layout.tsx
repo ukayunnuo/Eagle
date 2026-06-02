@@ -9,27 +9,26 @@ const navItems = [
 ];
 
 export default function Layout() {
-  const { user, logout } = useAuthStore();
+  const { logout } = useAuthStore();
 
   return (
-    <div className="flex h-screen">
+    <div className="flex flex-col lg:flex-row h-screen">
       {/* 侧边栏 */}
-      <aside className="w-60 shrink-0 border-r border-slate-800 bg-slate-950 flex flex-col">
-        <div className="p-5 border-b border-slate-800">
-          <h1 className="text-lg font-bold">
+      <aside className="w-full lg:w-60 shrink-0 border-b lg:border-b-0 lg:border-r border-slate-800 bg-slate-950 flex flex-row lg:flex-col overflow-x-auto lg:overflow-x-visible">
+        <div className="p-4 lg:p-5 border-r lg:border-r-0 lg:border-b border-slate-800 shrink-0">
+          <h1 className="text-lg font-bold whitespace-nowrap">
             🎯 <span className="text-green-400">LocateAnything</span>
           </h1>
-          <p className="text-xs text-slate-500 mt-1">Visual Grounding Service</p>
         </div>
 
-        <nav className="flex-1 p-3 space-y-1">
+        <nav className="flex-1 flex lg:flex-col p-2 lg:p-3 gap-1 overflow-x-auto lg:overflow-x-visible">
           {navItems.map(({ to, icon: Icon, label }) => (
             <NavLink
               key={to}
               to={to}
               end={to === "/"}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                `flex items-center gap-2 lg:gap-3 px-3 py-2 lg:py-2.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
                   isActive
                     ? "bg-green-500/10 text-green-400"
                     : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
@@ -37,27 +36,24 @@ export default function Layout() {
               }
             >
               <Icon size={18} />
-              {label}
+              <span className="hidden sm:inline">{label}</span>
             </NavLink>
           ))}
         </nav>
 
-        <div className="p-4 border-t border-slate-800">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-slate-400 truncate">{user?.username}</span>
-            <button
-              onClick={logout}
-              className="text-slate-500 hover:text-red-400 transition-colors"
-              title="退出登录"
-            >
-              <LogOut size={16} />
-            </button>
-          </div>
+        <div className="p-3 lg:p-4 border-l lg:border-l-0 lg:border-t border-slate-800 flex items-center shrink-0">
+          <button
+            onClick={logout}
+            className="text-slate-500 hover:text-red-400 transition-colors"
+            title="退出登录"
+          >
+            <LogOut size={16} />
+          </button>
         </div>
       </aside>
 
       {/* 主内容 */}
-      <main className="flex-1 overflow-auto p-6">
+      <main className="flex-1 overflow-auto p-4 sm:p-6">
         <Outlet />
       </main>
     </div>
