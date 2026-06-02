@@ -17,6 +17,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const tokens = await loginApi(username, password);
+      authLogin({ id: 0, username, created_at: "" }, tokens.access_token, tokens.refresh_token);
       const user = await getMe();
       authLogin(user, tokens.access_token, tokens.refresh_token);
       navigate("/");
