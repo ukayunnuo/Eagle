@@ -27,6 +27,12 @@ wandb
 output
 examples/*
 
+# Web Service
+data/
+server/static/
+frontend/node_modules/
+frontend/dist/
+
 eagle/eval/table/*.json
 eagle/eval/table/results/*.json
 checkpoints
@@ -45,3 +51,8 @@ unit_test*.*
 /.venv/
 /.hf_cache/
 
+/.claude/
+/.codex/
+/.codegraph/
+/CLAUDE.md
+/docs/superpowers/
