@@ -57,3 +57,4 @@ unit_test*.*
 /.codegraph/
 /CLAUDE.md
 /docs/superpowers/
+/frontend/test-results/*
