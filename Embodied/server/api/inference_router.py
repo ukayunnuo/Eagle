@@ -1,6 +1,7 @@
 """推理路由：图片同步推理 + 视频/批量异步推理。"""
 
 import json
+import time
 import uuid
 from pathlib import Path
 
@@ -8,7 +9,10 @@ from fastapi import APIRouter, HTTPException, UploadFile, File, Form, status
 from PIL import Image
 
 from server.auth.deps import CurrentUser
+from server.log import get_logger
 from server.tasks.schemas import BatchInferenceParams, VideoInferenceParams
+
+logger = get_logger(__name__)
 
 router = APIRouter(prefix="/inference", tags=["推理"])
 
@@ -79,16 +83,21 @@ async def inference_image(
     )
 
     # 执行推理
+    file_id = uuid.uuid4().hex[:12]
+    logger.info("推理开始: task=%s file_id=%s user_id=%s", task, file_id, current_user.id)
     try:
+        t0 = time.monotonic()
         answer = run_task(worker, model_image, task_args)
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"推理失败: {e}")
+        elapsed = time.monotonic() - t0
+        logger.info("推理完成: task=%s file_id=%s 耗时=%.2fs", task, file_id, elapsed)
+    except Exception:
+        logger.exception("图片推理失败: task=%s file_id=%s", task, file_id)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="推理失败，请稍后重试")
 
     # 生成标注图
     annotated = draw_annotations(image, answer)
 
     # 保存结果
-    file_id = uuid.uuid4().hex[:12]
     output_dir = Path("output") / file_id
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -165,6 +174,7 @@ async def inference_video(
     }
 
     actual_task_id = await manager.submit(current_user.id, "video", params, str(input_path))
+    logger.info("视频标注任务已提交: task_id=%s user_id=%s", actual_task_id, current_user.id)
     return {"task_id": actual_task_id, "status": "pending", "message": "视频标注任务已提交"}
 
 
@@ -180,6 +190,7 @@ async def inference_batch(current_user: CurrentUser, params: BatchInferenceParam
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="任务管理器未初始化")
 
     task_id = await manager.submit(current_user.id, "batch", params.model_dump())
+    logger.info("批量标注任务已提交: task_id=%s user_id=%s", task_id, current_user.id)
     return {"task_id": task_id, "status": "pending", "message": "批量标注任务已提交"}
 
 

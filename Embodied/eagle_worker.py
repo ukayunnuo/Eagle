@@ -15,12 +15,16 @@ Supported models:
   - nvidia/Eagle2.5-8B        (long-context VLM + grounding)
   - nvidia/Eagle2-1B / 2B     (lightweight VLM)
 """
+import logging
 import re
+import time
 from typing import Optional
 
 import torch
 from PIL import Image
 from transformers import AutoModel, AutoTokenizer, AutoProcessor
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -60,20 +64,26 @@ class EagleWorker:
         self.dtype = dtype
         self.model_path = model_path
 
+        logger.info("正在加载 tokenizer: %s", model_path)
         self.tokenizer = AutoTokenizer.from_pretrained(
             model_path, trust_remote_code=True
         )
+        logger.info("正在加载 processor: %s", model_path)
         self.processor = AutoProcessor.from_pretrained(
             model_path, trust_remote_code=True, use_fast=True
         )
+        logger.info("正在加载模型权重: %s (dtype=%s)", model_path, dtype)
+        t0 = time.monotonic()
         self.model = AutoModel.from_pretrained(
             model_path,
             torch_dtype=dtype,
             trust_remote_code=True,
             attn_implementation="flash_attention_2",
         ).to(device).eval()
+        elapsed = time.monotonic() - t0
 
         self.family = _detect_model_family(self.model.config)
+        logger.info("模型加载完成: %s family=%s device=%s 耗时=%.1fs", model_path, self.family, device, elapsed)
 
     # ------------------------------------------------------------------
     # Core predict
@@ -109,12 +119,17 @@ class EagleWorker:
             ]}
         ]
 
+        t0 = time.monotonic()
+        logger.info("推理开始: family=%s question=%s", self.family, question[:80])
         if self.family == "locateanything":
-            return self._predict_locateanything(
+            result = self._predict_locateanything(
                 messages, generation_mode, max_new_tokens, temperature, verbose
             )
         else:
-            return self._predict_eagle2(messages, max_new_tokens, temperature)
+            result = self._predict_eagle2(messages, max_new_tokens, temperature)
+        elapsed = time.monotonic() - t0
+        logger.info("推理完成: family=%s 耗时=%.3fs tokens=%d", self.family, elapsed, max_new_tokens)
+        return result
 
     def _predict_locateanything(
         self, messages, generation_mode, max_new_tokens, temperature, verbose

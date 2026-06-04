@@ -1,5 +1,6 @@
 import argparse
 import json
+import logging
 import os
 import re
 from pathlib import Path
@@ -7,7 +8,9 @@ from pathlib import Path
 import torch
 from PIL import Image, ImageDraw
 
-from locateanything_worker import LocateAnythingWorker
+from eagle_worker import EagleWorker
+
+logger = logging.getLogger(__name__)
 
 
 def _comma_list(value: str) -> list[str]:
@@ -19,9 +22,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run a LocateAnything example inference.")
     parser.add_argument("--model", default="nvidia/LocateAnything-3B")
     parser.add_argument("--image", default="assets/images/teaser.jpg")
-    parser.add_argument("--task", default="detect", choices=["detect", "ground_multi", "detect_text", "point", "ground_gui"])
+    parser.add_argument("--task", default="detect", choices=["detect", "ground_multi", "detect_text", "point", "ground_gui", "chat"])
     parser.add_argument("--categories", type=_comma_list, default=["person"])
     parser.add_argument("--phrase", default="person")
+    parser.add_argument("--question", default="Describe this image in detail.", help="通用图像对话问题（chat 任务用）")
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--dtype", default="bfloat16", choices=["bfloat16", "float16", "float32"])
     parser.add_argument("--generation-mode", default="hybrid", choices=["fast", "slow", "hybrid"])
@@ -116,7 +120,7 @@ def draw_annotations(image: Image.Image, answer: str) -> Image.Image:
     return annotated
 
 
-def run_task(worker: LocateAnythingWorker, image: Image.Image, args: argparse.Namespace) -> str:
+def run_task(worker: EagleWorker, image: Image.Image, args: argparse.Namespace) -> str:
     kwargs = _predict_kwargs(args)
     if args.task == "detect":
         result = worker.detect(image, args.categories, **kwargs)
@@ -126,6 +130,8 @@ def run_task(worker: LocateAnythingWorker, image: Image.Image, args: argparse.Na
         result = worker.detect_text(image, **kwargs)
     elif args.task == "point":
         result = worker.point(image, args.phrase, **kwargs)
+    elif args.task == "chat":
+        result = worker.chat(image, args.question, **kwargs)
     else:
         result = worker.ground_gui(image, args.phrase, **kwargs)
     return result["answer"]
@@ -138,10 +144,12 @@ def main(argv: list[str] | None = None) -> int:
     image_path = Path(args.image)
     original_image = Image.open(image_path).convert("RGB")
     image = prepare_image(original_image, args.max_image_edge)
-    worker = LocateAnythingWorker(args.model, device=args.device, dtype=_torch_dtype(args.dtype))
+    logger.info("加载模型: %s", args.model)
+    worker = EagleWorker(args.model, device=args.device, dtype=_torch_dtype(args.dtype))
 
+    logger.info("执行推理: task=%s image=%s", args.task, image_path)
     answer = run_task(worker, image, args)
-    print(answer)
+    print(answer)  # stdout 输出，便于 CLI 管道（如 grep / jq）
 
     output_image_path = None
     if args.output_image:

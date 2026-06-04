@@ -28,6 +28,7 @@ output
 examples/*
 
 # Web Service
+.env
 data/
 server/static/
 frontend/node_modules/

@@ -1,5 +1,6 @@
 import argparse
 import json
+import logging
 import os
 from pathlib import Path
 
@@ -9,6 +10,8 @@ from PIL import Image
 
 from locateanything_worker import LocateAnythingWorker
 from scripts.infer_example import _comma_list, _torch_dtype, draw_annotations, prepare_image, run_task
+
+logger = logging.getLogger(__name__)
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -100,10 +103,10 @@ def annotate_video(args: argparse.Namespace, worker: LocateAnythingWorker | None
             inferred = should_infer_frame(frame_index, args.every_n_frames)
 
             if inferred:
-                print(f"Inferencing frame {frame_index} at {timestamp_sec:.2f}s...", flush=True)
+                logger.info("推理帧 %d (%.2fs)...", frame_index, timestamp_sec)
                 model_image = prepare_image(original_image, args.max_image_edge)
                 answer = run_task(worker, model_image, args)
-                print(f"Frame {frame_index} answer: {answer}", flush=True)
+                logger.debug("帧 %d 结果: %s", frame_index, answer[:200])
                 last_answer = answer
             elif args.reuse_last:
                 answer = last_answer
@@ -140,9 +143,9 @@ def annotate_video(args: argparse.Namespace, worker: LocateAnythingWorker | None
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     summary = annotate_video(args)
-    print(f"Annotated video: {summary['output_video']}")
-    print(f"Processed frames: {summary['processed_frames']}")
-    print(f"JSON: {args.output_json}")
+    logger.info("标注视频: %s", summary['output_video'])
+    logger.info("处理帧数: %d", summary['processed_frames'])
+    logger.info("JSON 输出: %s", args.output_json)
     return 0
 
 

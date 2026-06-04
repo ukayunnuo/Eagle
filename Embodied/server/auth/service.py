@@ -10,6 +10,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from server.auth.models import User
 from server.auth.schemas import LoginRequest, TokenPayload, UserCreate
 from server.config import get_settings
+from server.log import get_logger
+
+logger = get_logger(__name__)
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -57,12 +60,14 @@ def decode_token(token: str) -> TokenPayload:
 async def register_user(db: AsyncSession, data: UserCreate) -> User:
     result = await db.execute(select(User).where(User.username == data.username))
     if result.scalar_one_or_none() is not None:
+        logger.warning("注册失败: 用户名已存在 username=%s", data.username)
         raise ValueError("用户名已存在")
 
     user = User(username=data.username, password_hash=hash_password(data.password))
     db.add(user)
     await db.commit()
     await db.refresh(user)
+    logger.info("用户注册成功: user_id=%s username=%s", user.id, user.username)
     return user
 
 
@@ -70,5 +75,7 @@ async def authenticate_user(db: AsyncSession, username: str, password: str) -> U
     result = await db.execute(select(User).where(User.username == username))
     user = result.scalar_one_or_none()
     if user is None or not verify_password(password, user.password_hash):
+        logger.warning("登录失败: 认证不通过 username=%s", username)
         return None
+    logger.info("登录成功: user_id=%s username=%s", user.id, user.username)
     return user

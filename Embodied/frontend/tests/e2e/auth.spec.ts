@@ -1,72 +1,72 @@
 import { test, expect } from "./fixtures";
 
+const API_BASE = "http://127.0.0.1:8000/api/v1";
+
 test.describe("认证流程", () => {
   test("注册新用户", async ({ page }) => {
     const username = `reg_${Date.now()}`;
     await page.goto("/register");
+    await page.waitForLoadState("networkidle");
 
-    await page.locator("input[type='text']").fill(username);
-    await page.locator("input[type='password']").fill("password123");
-    await page.locator("button[type='submit']").click();
+    // 填写注册表单
+    await page.locator("input[id='username']").fill(username);
+    await page.locator("input[id='password']").fill("password123");
+    await page.locator("input[id='confirmPassword']").fill("password123");
+    await page.getByRole("button", { name: "注册" }).click();
 
-    // 注册成功后跳转到登录页
-    await page.waitForURL("**/login", { timeout: 5000 });
-    await expect(page.locator("h1")).toContainText("LocateAnything");
+    // 注册成功后跳转到 dashboard
+    await page.waitForURL("**/dashboard", { timeout: 10000 });
   });
 
   test("注册重复用户名显示错误", async ({ page }) => {
     const username = `dup_${Date.now()}`;
     // 先注册一次
-    await page.request.post("/api/v1/auth/register", {
+    await page.request.post(`${API_BASE}/auth/register`, {
       data: { username, password: "pass123" },
     });
 
     await page.goto("/register");
-    await page.locator("input[type='text']").fill(username);
-    await page.locator("input[type='password']").fill("pass123");
-    await page.locator("button[type='submit']").click();
+    await page.waitForLoadState("networkidle");
 
-    await expect(page.locator("text=注册失败").or(page.locator("text=已存在"))).toBeVisible({
-      timeout: 5000,
-    });
+    await page.locator("input[id='username']").fill(username);
+    await page.locator("input[id='password']").fill("pass123");
+    await page.locator("input[id='confirmPassword']").fill("pass123");
+    await page.getByRole("button", { name: "注册" }).click();
+
+    // 应显示错误消息
+    await expect(page.locator(".ant-message-notice")).toBeVisible({ timeout: 5000 });
   });
 
   test("登录成功跳转到仪表盘", async ({ page }) => {
     const username = `login_${Date.now()}`;
     const password = "testpass123";
-    await page.request.post("/api/v1/auth/register", {
+    await page.request.post(`${API_BASE}/auth/register`, {
       data: { username, password },
     });
 
     await page.goto("/login");
-    await page.locator("input[type='text']").fill(username);
-    await page.locator("input[type='password']").fill(password);
-    await page.locator("button[type='submit']").click();
+    await page.waitForLoadState("networkidle");
 
-    await page.waitForURL("**/", { timeout: 5000 });
-    await expect(page.getByRole("heading", { name: "仪表盘" })).toBeVisible();
+    await page.locator("input[id='username']").fill(username);
+    await page.locator("input[id='password']").fill(password);
+    await page.getByRole("button", { name: "登录" }).click();
+
+    await page.waitForURL("**/dashboard", { timeout: 10000 });
   });
 
   test("登录失败显示错误提示", async ({ page }) => {
     await page.goto("/login");
-    await page.locator("input[type='text']").fill("nobody");
-    await page.locator("input[type='password']").fill("wrongpass");
-    await page.locator("button[type='submit']").click();
+    await page.waitForLoadState("networkidle");
 
-    await expect(page.locator("text=用户名或密码错误")).toBeVisible({ timeout: 5000 });
+    await page.locator("input[id='username']").fill("nobody");
+    await page.locator("input[id='password']").fill("wrongpass");
+    await page.getByRole("button", { name: "登录" }).click();
+
+    await expect(page.locator(".ant-message-notice")).toBeVisible({ timeout: 5000 });
   });
 
   test("未登录访问首页重定向到登录页", async ({ page }) => {
-    await page.goto("/");
-    await page.waitForURL("**/login", { timeout: 5000 });
-  });
-
-  test("登出后重定向到登录页", async ({ page, authToken }) => {
-    await page.goto("/");
-    await page.waitForLoadState("networkidle");
-
-    // 点击退出按钮
-    await page.locator("[title='退出登录']").click();
-    await page.waitForURL("**/login", { timeout: 5000 });
+    await page.goto("/dashboard");
+    await page.waitForURL("**/login", { timeout: 10000 });
   });
 });

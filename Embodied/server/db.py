@@ -1,9 +1,14 @@
 """SQLAlchemy 异步数据库引擎、Session 工厂和初始化函数。"""
 
+import re
+
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
 from server.config import get_settings
+from server.log import get_logger
+
+logger = get_logger(__name__)
 
 
 class Base(DeclarativeBase):
@@ -19,6 +24,8 @@ def _get_engine():
     if _engine is None:
         settings = get_settings()
         _engine = create_async_engine(settings.db_url, echo=False)
+        safe_url = re.sub(r"://.*@", "://***@", settings.db_url)
+        logger.info("数据库引擎已创建: %s", safe_url)
     return _engine
 
 
@@ -38,6 +45,10 @@ async def get_db():
 
 async def init_db():
     """创建所有表。启动时调用。"""
+    import server.auth.models  # noqa: F401
+    import server.tasks.models  # noqa: F401
+
     engine = _get_engine()
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    logger.info("数据库表已同步")

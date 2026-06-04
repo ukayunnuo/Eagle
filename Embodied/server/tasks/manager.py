@@ -12,7 +12,10 @@ from types import SimpleNamespace
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from server.log import get_logger
 from server.tasks.models import Task
+
+logger = get_logger(__name__)
 
 
 class AsyncTaskManager:
@@ -45,6 +48,7 @@ class AsyncTaskManager:
             await db.commit()
 
         await self._queue.put(task_id)
+        logger.info("任务已提交: task_id=%s type=%s user_id=%s", task_id, task_type, user_id)
         return task_id
 
     async def get_status(self, task_id: str) -> dict | None:
@@ -88,6 +92,7 @@ class AsyncTaskManager:
         """启动后台 worker 协程。"""
         self._running = True
         self._worker_task = asyncio.create_task(self._worker_loop())
+        logger.info("后台任务 worker 已启动")
 
     async def stop(self):
         """停止后台 worker 协程。"""
@@ -98,6 +103,7 @@ class AsyncTaskManager:
                 await self._worker_task
             except asyncio.CancelledError:
                 pass
+        logger.info("后台任务 worker 已停止")
 
     async def _worker_loop(self):
         """后台循环：从队列取任务并执行推理。"""
@@ -125,6 +131,7 @@ class AsyncTaskManager:
             task.status = "processing"
             task.started_at = datetime.now(timezone.utc)
             await db.commit()
+            logger.info("任务开始执行: task_id=%s type=%s", task_id, task.task_type)
 
         try:
             params = json.loads(task.params)
@@ -146,14 +153,16 @@ class AsyncTaskManager:
                     if result_path.exists():
                         task.result = result_path.read_text(encoding="utf-8")
                     await db.commit()
+                    logger.info("任务执行完成: task_id=%s", task_id)
 
-        except Exception as e:
+        except Exception:
+            logger.exception("任务执行失败: task_id=%s", task_id)
             async with self._db_factory() as db:
                 result = await db.execute(select(Task).where(Task.id == task_id))
                 task = result.scalar_one_or_none()
                 if task:
                     task.status = "failed"
-                    task.error = f"{type(e).__name__}: {e}\n{traceback.format_exc()}"
+                    task.error = traceback.format_exc()
                     task.completed_at = datetime.now(timezone.utc)
                     await db.commit()
 
@@ -161,6 +170,7 @@ class AsyncTaskManager:
         """在线程池中执行视频推理（同步）。"""
         from scripts.annotate_video import annotate_video
 
+        logger.debug("视频任务开始: task_id=%s input=%s", task_id, input_path)
         out = Path(output_dir)
         out.mkdir(parents=True, exist_ok=True)
 
@@ -189,6 +199,7 @@ class AsyncTaskManager:
         """在线程池中执行批量推理（同步）。"""
         from scripts.web_ui import run_batch_annotation
 
+        logger.debug("批量任务开始: task_id=%s input_dir=%s", task_id, params.get("input_dir"))
         out = Path(output_dir)
         out.mkdir(parents=True, exist_ok=True)
 
